@@ -87,7 +87,8 @@ load balance the requests:
 	# size of the ring considering the weight of the model
 	length = ceil(weight * N)
 
-	instance = start + random.uniform(0, length - 1)
+	# the final instance number:
+	instance = start + random.uniform(0, length - 1) % N
 ```
 
 When the number of instances is small the algorithm could have better
