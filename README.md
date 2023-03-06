@@ -109,9 +109,9 @@ build a predictive scheduling of the instances.
 
 However the autoscaling could be made in real-time:
 
-The min and max instances we have calculated can be used to set the autoscaller
-min and max number of instances (with some added margin).
+The min and max instances we have calculated can be used to set the
+autoscaller min and max number of instances (with some added margin).
 
 We can create a custom metric of the GPU usage that we can obtain with tools
 like NVML library or nvidia-smi. And send the sample to, e.g, a stackdriver
-metric and configure the autoscaler to use that metric as target.
+metric. Then, configure the autoscaler to use that metric as target.
