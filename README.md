@@ -115,3 +115,99 @@ autoscaller min and max number of instances (with some added margin).
 We can create a custom metric of the GPU usage that we can obtain with tools
 like NVML library or nvidia-smi. And send the sample to, e.g, a stackdriver
 metric. Then, configure the autoscaler to use that metric as target.
+
+
+## Addendum
+
+DISCLAIMER: This part was added after the first submission.
+
+The proposed algorithm above has a flaw since it fails to properly distribute
+the models around the ring/space according to the respective weight:
+
+```python
+start = hash(model) % N
+```
+
+The above improperly places the start position at relatively equal intervals
+which would make the models range to overlap or make a part of the ring
+unused.
+
+The following "shares" algorithm would correctly assign non-overlapping slices
+of the total space with respect to the relative weight of each model.
+
+The idea is to have a constant number of shares that represent the total space
+(or ring). Each instance would be assigned an equal range of the shares. Each
+model would be assigned a slice of shares and offset relative to its weight.
+
+
+```txt
+<------------------- total shares / space --------------------->
+[   model A ][  model B  ][         model C                    ]
+[  instance 0  ][  instance 1  ][  instance 2  ][  instance 3  ]
+```
+
+The algorithm will build a model_name -> slice table that allow to lookup its
+slice configuration from the relative weights calculated previously from the
+request distribution and the model latency table.
+
+When a request comes in the load balancer will select the target instance by
+looking up the slice of the model a selecting a random (or round robin) share
+within the slice.
+
+The share number is then converted into the instance number:
+
+```txt
+                                     selected share
+                                       ↓
+[   model A ][  model B  ][         model C                    ]
+[  instance 0  ][  instance 1  ][  instance 2  ][  instance 3  ]
+                                       ↑
+                                     selected instance
+```
+
+Sample code for the algorithm:
+
+```python
+
+Slice = namedtuple('Slice', ['share_count', 'start_offset'])
+
+def build_model_shares_lookup_table(model_weights, num_shares):
+    """ Builds the lookup table for shares.
+
+    `model_weights` is a dictionary model_name -> relative weight, the
+    sum of weights must be 1.0
+
+    `num_shares` a constant that represent the total space to be divided
+    among the models.
+
+    Builds a dictionary model_name -> Slice. Each models
+    will be assigned a slice of the available shares relative to the normalized weights.
+    """
+    offset = 0
+    models_lookup_table = dict()
+    for model_name, weight in model_weights.items():
+        share_count = math.floor(weight * num_shares)
+        models_lookup_table[model_name] = Slice(share_count, offset)
+        offset += share_count
+
+    return models_lookup_table
+
+def select_instance(model_shares_lookup_table, num_shares, num_instances, model_name):
+    """ Selects an instance for a request.
+
+    `model_shares_lookup_table` is the table built with `build_model_shares_lookup_table`
+
+    `num_shares` is total number of shares (as provided when building the lookup table)
+
+    `num_instances` is the total number of instances currently active.
+
+    `model_name` is the model name extract from the request payload.
+
+    Returns the select instance number in [0..num_instances)
+    """
+    config = model_shares_lookup_table[model_name]
+    # select a random point in the ring of shares [start, start + share_count)
+    share = math.floor(config.start_offset + random.randint(0, config.share_count - 1))
+    return math.floor(share / num_shares * num_instances)
+
+```
