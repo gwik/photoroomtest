@@ -3,7 +3,6 @@
 First we are going to calculate the upper bound for the number on instances
 needed to process the incoming workload.
 
-
 ```python
 
 # loaded from inputs:
@@ -74,7 +73,7 @@ controls how we want to favor latency over the number of instance:
 We can now use a ring of the instances and the weights we have calculated to
 load balance the requests:
 
-```
+```python
 	N = 10 # number of instances that have been scaled.
 
 	# extracted from the request payload
@@ -88,7 +87,7 @@ load balance the requests:
 	length = ceil(weight * N)
 
 	# the final instance number:
-	instance = start + random.uniform(0, length - 1) % N
+	instance = (start + random.uniform(0, length - 1)) % N
 ```
 
 When the number of instances is small the algorithm could have better
