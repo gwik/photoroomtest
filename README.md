@@ -63,8 +63,8 @@ for model, usage in cum_time_per_model:
 Let's add a parameter `F` in the range (0.0..1.0], which is a factor that
 controls how we want to favor latency over the number of instance:
 
-0.0 -> max latency, minimum number of instances
-1.0 -> min latency, maximum number of instances
+  - 0.0 -> max latency, minimum number of instances
+  - 1.0 -> min latency, maximum number of instances
 
 ```python
 	number_of_instances = ceil(num_instances_min + F * (num_instances_max - num_instances_min))
