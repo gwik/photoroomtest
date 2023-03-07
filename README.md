@@ -141,7 +141,7 @@ model would be assigned a slice of shares and offset relative to its weight.
 
 
 ```txt
-
+0              10              20              30              40
 <------------------- total shares / space --------------------->
 [   model A ][  model B  ][         model C                    ]
 [  instance 0  ][  instance 1  ][  instance 2  ][  instance 3  ]
@@ -207,7 +207,7 @@ def select_instance(model_shares_lookup_table, num_shares, num_instances, model_
 
     `model_name` is the model name extract from the request payload.
 
-    Returns the select instance number in [0..num_instances)
+    Returns the selected instance number in [0..num_instances)
     """
     config = model_shares_lookup_table[model_name]
     # select a random point in the ring of shares [start, start + share_count)
