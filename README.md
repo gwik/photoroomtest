@@ -129,7 +129,7 @@ start = hash(model) % N
 ```
 
 The above improperly places the start position at relatively equal intervals
-which would make the models range to overlap or make a part of the ring
+which would make the models ranges to overlap or make a part of the ring
 unused.
 
 The following "shares" algorithm would correctly assign non-overlapping slices
@@ -141,28 +141,32 @@ model would be assigned a slice of shares and offset relative to its weight.
 
 
 ```txt
+
 <------------------- total shares / space --------------------->
 [   model A ][  model B  ][         model C                    ]
 [  instance 0  ][  instance 1  ][  instance 2  ][  instance 3  ]
+
 ```
 
-The algorithm will build a model_name -> slice table that allow to lookup its
-slice configuration from the relative weights calculated previously from the
-request distribution and the model latency table.
+The algorithm will compute a model_name -> slice table that allow to lookup
+the slice configuration for a model. The table is built from the normalized
+relative weights calculated previously (`weights_per_model`).
 
-When a request comes in the load balancer will select the target instance by
-looking up the slice of the model a selecting a random (or round robin) share
+When a request comes in, the load balancer will select the target instance by
+looking up the slice of the model and selecting a random (or round robin) share
 within the slice.
 
-The share number is then converted into the instance number:
+The share is then converted into the instance number:
 
 ```txt
+
                                      selected share
                                        ↓
 [   model A ][  model B  ][         model C                    ]
 [  instance 0  ][  instance 1  ][  instance 2  ][  instance 3  ]
                                        ↑
                                      selected instance
+
 ```
 
 Sample code for the algorithm:
@@ -172,12 +176,12 @@ Sample code for the algorithm:
 Slice = namedtuple('Slice', ['share_count', 'start_offset'])
 
 def build_model_shares_lookup_table(model_weights, num_shares):
-    """ Builds the lookup table for shares.
+    """ Builds the lookup table for slices.
 
     `model_weights` is a dictionary model_name -> relative weight, the
-    sum of weights must be 1.0
+    sum of weights must be 1.0.
 
-    `num_shares` a constant that represent the total space to be divided
+    `num_shares` is a constant that represent the total space to be divided
     among the models.
 
     Builds a dictionary model_name -> Slice. Each models
